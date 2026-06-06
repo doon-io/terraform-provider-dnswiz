@@ -1,5 +1,10 @@
 # Terraform Provider for dnswiz
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/mark.svg">
+  <img src="assets/mark.svg" width="56" alt="dnswiz">
+</picture>
+
 [![Terraform Registry](https://img.shields.io/badge/terraform-registry-7b42bc?logo=terraform)](https://registry.terraform.io/providers/doon-io/dnswiz/latest)
 [![License](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 

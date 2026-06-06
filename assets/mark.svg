@@ -1,0 +1,8 @@
+<!-- Standalone brand mark on a transparent background: dot inside a
+     ring, in dnswiz green. Use this when the canvas already has its
+     own color (social cards, hero illustrations, embeds). Scaled
+     proportions match the favicon variant. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="dnswiz">
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#4ade80" stroke-width="4"/>
+  <circle cx="32" cy="32" r="8" fill="#4ade80"/>
+</svg>
