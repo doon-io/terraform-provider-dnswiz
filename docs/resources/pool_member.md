@@ -23,8 +23,8 @@ Binds an endpoint into a pool with a per-pool weight and priority.
 ### Optional
 
 - `enabled` (Boolean) Whether the engine considers this member when selecting an answer. Defaults to `true`.
-- `priority` (Number) Priority for active-passive pools. Lower wins. Must be 1..1000. Defaults to 1.
-- `weight` (Number) Relative weight inside the pool. Must be 1..10000. Defaults to 100.
+- `priority` (Number) Priority for active-passive pools. Lower wins. Must be 1..1000. Defaults to the server default if omitted.
+- `weight` (Number) Relative weight inside the pool. Must be 1..10000. Defaults to the server default (100) if omitted.
 
 ### Read-Only
 

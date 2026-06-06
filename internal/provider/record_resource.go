@@ -262,7 +262,11 @@ func (r *recordResource) ImportState(ctx context.Context, req resource.ImportSta
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func fromAPIRecord(rec *client.Record, prev recordResourceModel) recordResourceModel {
+func fromAPIRecord(rec *client.Record, _ recordResourceModel) recordResourceModel {
+	// Start every type-specific attribute as null. decodeRecordData
+	// fills in just the ones that apply to this record's type. Anything
+	// not applicable stays null, which lets users omit it from HCL
+	// without terraform thinking there's drift.
 	m := recordResourceModel{
 		ID:         types.StringValue(rec.ID),
 		ZoneID:     types.StringValue(rec.ZoneID),
@@ -271,15 +275,13 @@ func fromAPIRecord(rec *client.Record, prev recordResourceModel) recordResourceM
 		TTL:        types.Int64Value(int64(rec.TTL)),
 		TTLInherit: types.BoolValue(rec.TTLInherit),
 		Active:     types.BoolValue(rec.Active),
-		// Carry forward type-specific fields from the previous state
-		// so unrelated columns stay null and don't trip a diff.
-		Value:    prev.Value,
-		Priority: prev.Priority,
-		Weight:   prev.Weight,
-		Port:     prev.Port,
-		Tag:      prev.Tag,
-		Flags:    prev.Flags,
-		PoolID:   prev.PoolID,
+		Value:      types.StringNull(),
+		Priority:   types.Int64Null(),
+		Weight:     types.Int64Null(),
+		Port:       types.Int64Null(),
+		Tag:        types.StringNull(),
+		Flags:      types.Int64Null(),
+		PoolID:     types.StringNull(),
 	}
 	if rec.Comment != "" {
 		m.Comment = types.StringValue(rec.Comment)

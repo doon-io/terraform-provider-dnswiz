@@ -7,12 +7,14 @@ import (
 
 // Endpoint mirrors /v1/endpoints items. When HealthMonitorID is set,
 // the probe target is composed from monitor + host + port. Without a
-// monitor, kind + target is the legacy fallback.
+// monitor, kind + target is the legacy fallback. Target is required
+// by the create endpoint even when a monitor is set; the provider
+// fills it from value if the user didn't set it explicitly.
 type Endpoint struct {
 	ID              string `json:"id,omitempty"`
 	Name            string `json:"name"`
 	Kind            string `json:"kind"`
-	Target          string `json:"target,omitempty"`
+	Target          string `json:"target"`
 	Value           string `json:"value,omitempty"`
 	Host            string `json:"host,omitempty"`
 	Port            int    `json:"port,omitempty"`

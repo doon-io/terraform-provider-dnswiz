@@ -27,6 +27,7 @@ resource "dnswiz_endpoint" "web_a" {
 
 ### Required
 
+- `kind` (String) Probe kind: `http`, `https`, or `tcp`.
 - `name` (String) Human-readable endpoint name.
 - `value` (String) DNS answer value returned when this endpoint is selected. Typically an IP address or target hostname.
 
@@ -34,7 +35,6 @@ resource "dnswiz_endpoint" "web_a" {
 
 - `health_monitor_id` (String) ID of the health monitor used to probe this endpoint. Recommended over inline kind+target.
 - `host` (String) Hostname or IP used by the health probe. Required when health_monitor_id is set.
-- `kind` (String) Probe kind: `http`, `https`, or `tcp`. Used as the legacy fallback when no health_monitor_id is set.
 - `port` (Number) Probe port. 0 (or omitted) means use the monitor's default (443 for HTTPS, 80 for HTTP).
 
 ### Read-Only

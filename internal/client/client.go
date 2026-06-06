@@ -76,9 +76,18 @@ func (c *Client) Do(ctx context.Context, method, p string, body, out any) error 
 		reader = bytes.NewReader(buf)
 	}
 
-	u, err := url.JoinPath(c.baseURL, p)
+	// Split the path from any query string the caller appended (e.g.
+	// "/v1/pools?limit=500") before joining. url.JoinPath URL-escapes
+	// the whole segment including the question mark, which would
+	// otherwise produce "/v1/pools%3Flimit=500" and 404 against the
+	// server's router.
+	pathOnly, query, _ := strings.Cut(p, "?")
+	u, err := url.JoinPath(c.baseURL, pathOnly)
 	if err != nil {
 		return fmt.Errorf("build url: %w", err)
+	}
+	if query != "" {
+		u = u + "?" + query
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, u, reader)

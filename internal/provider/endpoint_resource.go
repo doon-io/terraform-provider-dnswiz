@@ -58,9 +58,8 @@ func (r *endpointResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:            true,
 			},
 			"kind": schema.StringAttribute{
-				MarkdownDescription: "Probe kind: `http`, `https`, or `tcp`. Used as the legacy fallback when no health_monitor_id is set.",
-				Optional:            true,
-				Computed:            true,
+				MarkdownDescription: "Probe kind: `http`, `https`, or `tcp`.",
+				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("http", "https", "tcp"),
 				},
@@ -106,14 +105,7 @@ func (r *endpointResource) Create(ctx context.Context, req resource.CreateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	in := client.Endpoint{
-		Name:            plan.Name.ValueString(),
-		Kind:            plan.Kind.ValueString(),
-		Value:           plan.Value.ValueString(),
-		Host:            plan.Host.ValueString(),
-		Port:            int(plan.Port.ValueInt64()),
-		HealthMonitorID: plan.HealthMonitorID.ValueString(),
-	}
+	in := planToEndpoint(plan)
 	got, err := r.client.CreateEndpoint(ctx, in)
 	if err != nil {
 		resp.Diagnostics.AddError("create endpoint", err.Error())
@@ -146,20 +138,36 @@ func (r *endpointResource) Update(ctx context.Context, req resource.UpdateReques
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	in := client.Endpoint{
-		Name:            plan.Name.ValueString(),
-		Kind:            plan.Kind.ValueString(),
-		Value:           plan.Value.ValueString(),
-		Host:            plan.Host.ValueString(),
-		Port:            int(plan.Port.ValueInt64()),
-		HealthMonitorID: plan.HealthMonitorID.ValueString(),
-	}
-	got, err := r.client.UpdateEndpoint(ctx, plan.ID.ValueString(), in)
+	got, err := r.client.UpdateEndpoint(ctx, plan.ID.ValueString(), planToEndpoint(plan))
 	if err != nil {
 		resp.Diagnostics.AddError("update endpoint", err.Error())
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIEndpoint(got))...)
+}
+
+// planToEndpoint maps the Terraform resource model to the API request
+// shape. Target is fixed up here: the server requires it even when a
+// health monitor is configured, but Terraform users typically only
+// care about value (the DNS answer) and host/port (the probe knob).
+// Fall back to value (or host if value is empty) so the server stays
+// happy without forcing users to set target explicitly.
+func planToEndpoint(m endpointResourceModel) client.Endpoint {
+	value := m.Value.ValueString()
+	host := m.Host.ValueString()
+	target := value
+	if target == "" {
+		target = host
+	}
+	return client.Endpoint{
+		Name:            m.Name.ValueString(),
+		Kind:            m.Kind.ValueString(),
+		Target:          target,
+		Value:           value,
+		Host:            host,
+		Port:            int(m.Port.ValueInt64()),
+		HealthMonitorID: m.HealthMonitorID.ValueString(),
+	}
 }
 
 func (r *endpointResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -3,6 +3,10 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // encodeRecordData turns the type plus per-type Terraform attributes
@@ -10,7 +14,9 @@ import (
 //
 // The shape is dictated by the server, see
 // packages/server/internal/records/records.go in the dnswiz repo for
-// the canonical validators.
+// the canonical validators. Notably SRV and CAA expect a single
+// `value` string composed of space-separated fields (RFC 2782 and
+// RFC 8659 respectively), not separate JSON keys per field.
 func encodeRecordData(rtype string, m recordResourceModel) (json.RawMessage, error) {
 	switch rtype {
 	case "A", "AAAA", "CNAME", "NS", "PTR", "DNAME", "TXT", "ANAME":
@@ -28,26 +34,27 @@ func encodeRecordData(rtype string, m recordResourceModel) (json.RawMessage, err
 		})
 	case "SRV":
 		if m.Value.IsNull() || m.Priority.IsNull() || m.Weight.IsNull() || m.Port.IsNull() {
-			return nil, fmt.Errorf("SRV records require value, priority, weight, and port")
+			return nil, fmt.Errorf("SRV records require value (target), priority, weight, and port")
 		}
-		return json.Marshal(map[string]any{
-			"value":    m.Value.ValueString(),
-			"priority": m.Priority.ValueInt64(),
-			"weight":   m.Weight.ValueInt64(),
-			"port":     m.Port.ValueInt64(),
-		})
+		// RFC 2782 wire format: "<priority> <weight> <port> <target>".
+		v := fmt.Sprintf("%d %d %d %s",
+			m.Priority.ValueInt64(),
+			m.Weight.ValueInt64(),
+			m.Port.ValueInt64(),
+			m.Value.ValueString(),
+		)
+		return json.Marshal(map[string]any{"value": v})
 	case "CAA":
 		if m.Tag.IsNull() || m.Value.IsNull() {
 			return nil, fmt.Errorf("CAA records require tag and value")
 		}
-		out := map[string]any{
-			"tag":   m.Tag.ValueString(),
-			"value": m.Value.ValueString(),
-		}
+		flag := int64(0)
 		if !m.Flags.IsNull() && !m.Flags.IsUnknown() {
-			out["flags"] = m.Flags.ValueInt64()
+			flag = m.Flags.ValueInt64()
 		}
-		return json.Marshal(out)
+		// RFC 8659 zonefile syntax: "<flag> <tag> <value>".
+		v := fmt.Sprintf("%d %s %s", flag, m.Tag.ValueString(), m.Value.ValueString())
+		return json.Marshal(map[string]any{"value": v})
 	case "POOL":
 		if m.PoolID.IsNull() || m.PoolID.IsUnknown() {
 			return nil, fmt.Errorf("POOL records require pool_id")
@@ -58,9 +65,10 @@ func encodeRecordData(rtype string, m recordResourceModel) (json.RawMessage, err
 	}
 }
 
-// decodeRecordData copies fields out of the API's data envelope back
-// into the resource model. Fields not relevant to the type are left
-// at their null/unknown state so Terraform doesn't see a diff.
+// decodeRecordData sets the type-specific attributes on m from the
+// API's data envelope. Callers should null out every type-specific
+// attribute on m before calling this so that fields irrelevant to
+// the record's type stay null in state.
 func decodeRecordData(rtype string, data json.RawMessage, m *recordResourceModel) error {
 	var env map[string]any
 	if err := json.Unmarshal(data, &env); err != nil {
@@ -78,41 +86,48 @@ func decodeRecordData(rtype string, data json.RawMessage, m *recordResourceModel
 	switch rtype {
 	case "A", "AAAA", "CNAME", "NS", "PTR", "DNAME", "TXT", "ANAME":
 		if v, ok := str("value"); ok {
-			setString(&m.Value, v)
+			m.Value = types.StringValue(v)
 		}
 	case "MX":
 		if v, ok := str("value"); ok {
-			setString(&m.Value, v)
+			m.Value = types.StringValue(v)
 		}
 		if v, ok := num("priority"); ok {
-			setInt(&m.Priority, v)
+			m.Priority = types.Int64Value(v)
 		}
 	case "SRV":
+		// Parse the composed RFC 2782 value back into the four
+		// attributes so the user's plan round-trips cleanly.
 		if v, ok := str("value"); ok {
-			setString(&m.Value, v)
-		}
-		if v, ok := num("priority"); ok {
-			setInt(&m.Priority, v)
-		}
-		if v, ok := num("weight"); ok {
-			setInt(&m.Weight, v)
-		}
-		if v, ok := num("port"); ok {
-			setInt(&m.Port, v)
+			parts := strings.Fields(v)
+			if len(parts) == 4 {
+				if p, err := strconv.Atoi(parts[0]); err == nil {
+					m.Priority = types.Int64Value(int64(p))
+				}
+				if w, err := strconv.Atoi(parts[1]); err == nil {
+					m.Weight = types.Int64Value(int64(w))
+				}
+				if port, err := strconv.Atoi(parts[2]); err == nil {
+					m.Port = types.Int64Value(int64(port))
+				}
+				m.Value = types.StringValue(parts[3])
+			}
 		}
 	case "CAA":
-		if v, ok := str("tag"); ok {
-			setString(&m.Tag, v)
-		}
+		// Parse "<flag> <tag> <value>" back into attributes.
 		if v, ok := str("value"); ok {
-			setString(&m.Value, v)
-		}
-		if v, ok := num("flags"); ok {
-			setInt(&m.Flags, v)
+			parts := strings.SplitN(v, " ", 3)
+			if len(parts) == 3 {
+				if f, err := strconv.Atoi(parts[0]); err == nil {
+					m.Flags = types.Int64Value(int64(f))
+				}
+				m.Tag = types.StringValue(parts[1])
+				m.Value = types.StringValue(strings.Trim(parts[2], `"`))
+			}
 		}
 	case "POOL":
 		if v, ok := str("pool_id"); ok {
-			setString(&m.PoolID, v)
+			m.PoolID = types.StringValue(v)
 		}
 	}
 	return nil

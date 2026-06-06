@@ -107,7 +107,12 @@ func (r *zonePolicyResource) Create(ctx context.Context, req resource.CreateRequ
 		resp.Diagnostics.AddError("create zone policy", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIZonePolicy(plan.ZoneID.ValueString(), got))...)
+	out := fromAPIZonePolicy(plan.ZoneID.ValueString(), got)
+	// Preserve the user's JSON string verbatim if it parses to the same
+	// data as the server returned. Server can reorder keys, which would
+	// otherwise look like drift even though the policy is identical.
+	out.ConfigJSON = preferUserJSON(plan.ConfigJSON, out.ConfigJSON)
+	resp.Diagnostics.Append(resp.State.Set(ctx, out)...)
 }
 
 func (r *zonePolicyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -128,7 +133,9 @@ func (r *zonePolicyResource) Read(ctx context.Context, req resource.ReadRequest,
 	kind := state.Kind.ValueString()
 	for i := range policies {
 		if policies[i].Kind == kind {
-			resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIZonePolicy(state.ZoneID.ValueString(), &policies[i]))...)
+			out := fromAPIZonePolicy(state.ZoneID.ValueString(), &policies[i])
+			out.ConfigJSON = preferUserJSON(state.ConfigJSON, out.ConfigJSON)
+			resp.Diagnostics.Append(resp.State.Set(ctx, out)...)
 			return
 		}
 	}
@@ -155,7 +162,9 @@ func (r *zonePolicyResource) Update(ctx context.Context, req resource.UpdateRequ
 		resp.Diagnostics.AddError("update zone policy", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIZonePolicy(plan.ZoneID.ValueString(), got))...)
+	out := fromAPIZonePolicy(plan.ZoneID.ValueString(), got)
+	out.ConfigJSON = preferUserJSON(plan.ConfigJSON, out.ConfigJSON)
+	resp.Diagnostics.Append(resp.State.Set(ctx, out)...)
 }
 
 func (r *zonePolicyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -198,6 +207,32 @@ func (r *zonePolicyResource) applyPolicy(ctx context.Context, plan zonePolicyRes
 		up.Config = &raw
 	}
 	return r.client.PatchZonePolicy(ctx, plan.ZoneID.ValueString(), plan.Kind.ValueString(), up)
+}
+
+// preferUserJSON returns the user's JSON string verbatim if it parses
+// to the same data as the server's. JSON object key order is not
+// semantically meaningful, but Terraform compares the raw strings, so
+// the server reordering keys would otherwise look like state drift.
+func preferUserJSON(user, server types.String) types.String {
+	if user.IsNull() || user.IsUnknown() {
+		return server
+	}
+	if user.ValueString() == server.ValueString() {
+		return user
+	}
+	var a, b any
+	if json.Unmarshal([]byte(user.ValueString()), &a) != nil {
+		return server
+	}
+	if json.Unmarshal([]byte(server.ValueString()), &b) != nil {
+		return server
+	}
+	ja, _ := json.Marshal(a)
+	jb, _ := json.Marshal(b)
+	if string(ja) == string(jb) {
+		return user
+	}
+	return server
 }
 
 func fromAPIZonePolicy(zoneID string, p *client.ZonePolicy) zonePolicyResourceModel {

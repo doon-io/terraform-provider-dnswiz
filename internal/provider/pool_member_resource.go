@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -69,16 +68,14 @@ func (r *poolMemberResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"weight": schema.Int64Attribute{
-				MarkdownDescription: "Relative weight inside the pool. Must be 1..10000. Defaults to 100.",
+				MarkdownDescription: "Relative weight inside the pool. Must be 1..10000. Defaults to the server default (100) if omitted.",
 				Optional:            true,
 				Computed:            true,
-				Default:             int64default.StaticInt64(100),
 			},
 			"priority": schema.Int64Attribute{
-				MarkdownDescription: "Priority for active-passive pools. Lower wins. Must be 1..1000. Defaults to 1.",
+				MarkdownDescription: "Priority for active-passive pools. Lower wins. Must be 1..1000. Defaults to the server default if omitted.",
 				Optional:            true,
 				Computed:            true,
-				Default:             int64default.StaticInt64(1),
 			},
 			"enabled": schema.BoolAttribute{
 				MarkdownDescription: "Whether the engine considers this member when selecting an answer. Defaults to `true`.",
@@ -109,22 +106,27 @@ func (r *poolMemberResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	// Weight is the only field the create endpoint accepts. If the user
+	// omitted it, send 100 (the server's own default) so we land in a
+	// predictable state.
+	createWeight := 100
+	if !plan.Weight.IsNull() && !plan.Weight.IsUnknown() {
+		createWeight = int(plan.Weight.ValueInt64())
+	}
 	member, err := r.client.AddPoolMember(ctx, plan.PoolID.ValueString(), client.PoolMemberCreate{
 		EndpointID: plan.EndpointID.ValueString(),
-		Weight:     int(plan.Weight.ValueInt64()),
+		Weight:     createWeight,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("add pool member", err.Error())
 		return
 	}
 
-	// Priority and enabled aren't accepted on the create endpoint, so
-	// apply them in follow-up calls if the user set non-default values.
-	if plan.Priority.ValueInt64() != 1 {
+	// Priority is not accepted on the create endpoint. Only patch if
+	// the user explicitly set it; otherwise the server default sticks.
+	if !plan.Priority.IsNull() && !plan.Priority.IsUnknown() {
 		prio := int(plan.Priority.ValueInt64())
-		w := int(plan.Weight.ValueInt64())
 		updated, err := r.client.UpdatePoolMember(ctx, plan.PoolID.ValueString(), member.ID, client.PoolMemberUpdate{
-			Weight:   &w,
 			Priority: &prio,
 		})
 		if err != nil {

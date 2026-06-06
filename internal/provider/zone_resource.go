@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -199,9 +200,13 @@ func zoneUpdateFromPlan(m zoneResourceModel) client.ZoneUpdate {
 }
 
 func fromAPIZone(z *client.Zone) zoneResourceModel {
+	// Server stores fully-qualified names with a trailing dot; users
+	// almost always write the unqualified form. Strip the dot so plan
+	// and state round-trip without diffs.
+	name := strings.TrimSuffix(z.Name, ".")
 	m := zoneResourceModel{
 		ID:     types.StringValue(z.ID),
-		Name:   types.StringValue(z.Name),
+		Name:   types.StringValue(name),
 		Active: types.BoolValue(z.Active),
 	}
 	if z.DefaultTTL != nil {
