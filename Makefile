@@ -1,4 +1,4 @@
-.PHONY: build test testacc fmt vet install clean
+.PHONY: build test testacc fmt vet install clean generate
 
 build:
 	go build -o terraform-provider-dnswiz .
@@ -34,3 +34,9 @@ install: build
 clean:
 	rm -f terraform-provider-dnswiz
 	rm -rf dist/
+
+# Regenerates the docs/ tree that the Terraform Registry renders.
+# Pulls descriptions from the provider schema and example HCL from
+# examples/. Run after any schema change.
+generate:
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name dnswiz
