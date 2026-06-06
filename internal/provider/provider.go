@@ -44,7 +44,15 @@ type dnswizProviderModel struct {
 
 func (p *dnswizProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manage dnswiz zones, records, GSLB pools, and policies.",
+		MarkdownDescription: "Manage [dnswiz](https://dnswiz.app) end-to-end as code: " +
+			"authoritative DNS zones and records, GSLB pools and members, health monitors, " +
+			"zone security policies, notification channels, and TLS certificates issued via " +
+			"ACME with DNS-01 solved automatically.\n\n" +
+			"dnswiz is a hosted GSLB + authoritative DNS service. Once a zone is delegated to " +
+			"`ns1.dnswiz.app` and `ns2.dnswiz.app`, this provider becomes the single source of " +
+			"truth for everything about it: A/AAAA, GSLB routing (failover, weighted, geo, " +
+			"latency, canary), uptime monitors, the firewall that decides which queries to " +
+			"answer, and the TLS certs your apps actually serve.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				MarkdownDescription: "Base URL of the dnswiz API, including the `/api` path prefix. Defaults to `https://console.dnswiz.app/api`. Override for self-hosted installs. Can be set via the `DNSWIZ_ENDPOINT` env var.",
@@ -101,6 +109,7 @@ func (p *dnswizProvider) Resources(_ context.Context) []func() resource.Resource
 		NewHealthMonitorResource,
 		NewNotificationChannelResource,
 		NewZonePolicyResource,
+		NewCertResource,
 	}
 }
 

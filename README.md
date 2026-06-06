@@ -1,17 +1,25 @@
 # Terraform Provider for dnswiz
 
-Manage [dnswiz](https://dnswiz.app) zones, records, GSLB pools, and policies as code.
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7b42bc?logo=terraform)](https://registry.terraform.io/providers/doon-io/dnswiz/latest)
+[![License](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 
-## Status
+Manage your [dnswiz](https://dnswiz.app) tenant end-to-end as code: authoritative
+DNS zones and records, GSLB pools and members, health monitors, zone security
+policies, notification channels, and TLS certs issued via ACME with DNS-01
+solved automatically.
 
-`v0`, early development. Resource coverage is still growing. See the
-[CHANGELOG](./CHANGELOG.md) for what each release adds.
+## Why use it
 
-## Requirements
+dnswiz already owns your zone, so it can do things a generic DNS-as-code setup
+can't:
 
-- Terraform 1.6 or newer
-- Go 1.23 or newer (only if building from source)
-- A dnswiz account and an API key from `Settings → API keys` in the console
+- One `terraform apply` provisions a zone, the GSLB record on top of it, the
+  pool of backends, and the TLS cert for the FQDN. No external ACME runner,
+  no DNS-01 wiring, no second provider for cert issuance.
+- The query firewall, hijack monitor, and notification routing live in the
+  same plan as the records they protect, so review and rollback are atomic.
+- Drift detection covers what dnswiz is actually serving, not what some
+  external registry thinks it ought to be.
 
 ## Quick start
 
@@ -26,36 +34,75 @@ terraform {
 }
 
 provider "dnswiz" {
+  # Or set DNSWIZ_API_KEY in the env.
   api_key = var.dnswiz_api_key
 }
 
 resource "dnswiz_zone" "example" {
   name = "example.com"
 }
+
+resource "dnswiz_record" "www" {
+  zone_id = dnswiz_zone.example.id
+  name    = "www"
+  type    = "A"
+  ttl     = 300
+  data    = "203.0.113.10"
+}
+
+resource "dnswiz_cert" "www" {
+  names = ["www.example.com"]
+}
 ```
 
-## Provider configuration
-
-| Argument   | Env var          | Required | Description                                                          |
-| ---------- | ---------------- | -------- | -------------------------------------------------------------------- |
-| `endpoint` | `DNSWIZ_ENDPOINT`| no       | Base URL of the dnswiz API. Defaults to `https://console.dnswiz.app`. Set this if you self-host. |
-| `api_key`  | `DNSWIZ_API_KEY` | yes      | API key from the dnswiz console under Settings, API keys.            |
+Generate an API key under **Settings → API keys** in the dnswiz console. Lock
+it to a CIDR if you run Terraform from known runners; the API enforces the
+allow-list.
 
 ## Resources
 
-| Name                 | Status      |
-| -------------------- | ----------- |
-| `dnswiz_zone`        | implemented |
-| `dnswiz_record`      | planned     |
-| `dnswiz_pool`        | planned     |
-| `dnswiz_pool_member` | planned     |
-| `dnswiz_endpoint`    | planned     |
+| Resource                       | What it covers                                                    |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `dnswiz_zone`                  | Apex zone settings (default TTL, SOA RNAME, negative TTL)         |
+| `dnswiz_record`                | A, AAAA, CNAME, MX, TXT, SRV, NS, CAA, ANAME, plus GSLB types     |
+| `dnswiz_pool`                  | GSLB pool definitions                                             |
+| `dnswiz_pool_member`           | Backend members attached to a pool                                |
+| `dnswiz_endpoint`              | Probe targets for uptime and SLA tracking                         |
+| `dnswiz_health_monitor`        | TCP, HTTP, UDP, ICMP, DNS probes attached to pool members         |
+| `dnswiz_zone_policy`           | Per-zone hijack monitor and query firewall                        |
+| `dnswiz_notification_channel`  | Slack, webhook, email targets for outages and policy events       |
+| `dnswiz_cert`                  | TLS cert issued via your tenant's ACME CA, DNS-01 solved for you  |
+
+Data sources for read-only lookup-by-name are available for zones, pools,
+endpoints, and health monitors.
+
+## Provider configuration
+
+| Argument   | Env var           | Required | Description                                                                                       |
+| ---------- | ----------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `api_key`  | `DNSWIZ_API_KEY`  | yes      | API key from the dnswiz console.                                                                  |
+| `endpoint` | `DNSWIZ_ENDPOINT` | no       | Base URL of the dnswiz API including the `/api` prefix. Defaults to `https://console.dnswiz.app/api`. Override for self-hosted installs. |
+
+## Requirements
+
+- Terraform 1.6 or newer
+- Go 1.23 or newer (only if building from source)
+- A dnswiz account and an API key from **Settings → API keys**
+
+## Docs
+
+Full reference for every resource and data source is on the Terraform Registry:
+<https://registry.terraform.io/providers/doon-io/dnswiz/latest/docs>.
+
+Schema docs are generated by `tfplugindocs` from the resource definitions plus
+the `examples/` and `templates/` trees. Run `make generate` after any schema
+change; CI fails if `docs/` is stale.
 
 ## Contributing
 
-Bug reports and pull requests are welcome. See
-[CONTRIBUTING.md](./CONTRIBUTING.md) for build instructions and the
-acceptance test setup.
+Bug reports and pull requests welcome. See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for build instructions and the acceptance
+test setup.
 
 ## License
 
