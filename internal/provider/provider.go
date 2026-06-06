@@ -47,7 +47,7 @@ func (p *dnswizProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 		MarkdownDescription: "Manage dnswiz zones, records, GSLB pools, and policies.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Base URL of the dnswiz API. Defaults to `https://console.dnswiz.app`. Override for self-hosted installs. Can be set via the `DNSWIZ_ENDPOINT` env var.",
+				MarkdownDescription: "Base URL of the dnswiz API, including the `/api` path prefix. Defaults to `https://console.dnswiz.app/api`. Override for self-hosted installs. Can be set via the `DNSWIZ_ENDPOINT` env var.",
 				Optional:            true,
 			},
 			"api_key": schema.StringAttribute{
@@ -68,7 +68,10 @@ func (p *dnswizProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 	// Resolve endpoint + api_key with env-var fallback. Tested order
 	// matches Terraform conventions: explicit config wins over env.
-	endpoint := stringOrEnv(cfg.Endpoint, "DNSWIZ_ENDPOINT", "https://console.dnswiz.app")
+	// The /api suffix is required because the production reverse proxy
+	// routes /api/* to the API backend and /v1/* directly to the
+	// browser SPA.
+	endpoint := stringOrEnv(cfg.Endpoint, "DNSWIZ_ENDPOINT", "https://console.dnswiz.app/api")
 	apiKey := stringOrEnv(cfg.APIKey, "DNSWIZ_API_KEY", "")
 
 	if apiKey == "" {

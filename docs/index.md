@@ -39,4 +39,4 @@ variable "dnswiz_api_key" {
 ### Optional
 
 - `api_key` (String, Sensitive) API key for the dnswiz account. Generate one at Settings → API keys. Can be set via the `DNSWIZ_API_KEY` env var.
-- `endpoint` (String) Base URL of the dnswiz API. Defaults to `https://console.dnswiz.app`. Override for self-hosted installs. Can be set via the `DNSWIZ_ENDPOINT` env var.
+- `endpoint` (String) Base URL of the dnswiz API, including the `/api` path prefix. Defaults to `https://console.dnswiz.app/api`. Override for self-hosted installs. Can be set via the `DNSWIZ_ENDPOINT` env var.
