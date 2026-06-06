@@ -60,3 +60,16 @@ func (c *Client) UpdateZone(ctx context.Context, id string, in ZoneUpdate) (*Zon
 func (c *Client) DeleteZone(ctx context.Context, id string) error {
 	return c.Do(ctx, http.MethodDelete, "/v1/zones/"+id, nil, nil)
 }
+
+// ListZones returns the first page of zones. For tenants with many
+// zones the next_cursor is ignored; data sources are expected to look
+// up by unique name.
+func (c *Client) ListZones(ctx context.Context) ([]Zone, error) {
+	var page struct {
+		Items []Zone `json:"items"`
+	}
+	if err := c.Do(ctx, http.MethodGet, "/v1/zones?limit=500", nil, &page); err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}

@@ -51,3 +51,13 @@ func (c *Client) UpdateEndpoint(ctx context.Context, id string, in Endpoint) (*E
 func (c *Client) DeleteEndpoint(ctx context.Context, id string) error {
 	return c.Do(ctx, http.MethodDelete, "/v1/endpoints/"+id, nil, nil)
 }
+
+func (c *Client) ListEndpoints(ctx context.Context) ([]Endpoint, error) {
+	var page struct {
+		Items []Endpoint `json:"items"`
+	}
+	if err := c.Do(ctx, http.MethodGet, "/v1/endpoints?limit=500", nil, &page); err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}

@@ -56,6 +56,16 @@ func (c *Client) DeletePool(ctx context.Context, id string) error {
 	return c.Do(ctx, http.MethodDelete, "/v1/pools/"+id, nil, nil)
 }
 
+func (c *Client) ListPools(ctx context.Context) ([]Pool, error) {
+	var page struct {
+		Items []Pool `json:"items"`
+	}
+	if err := c.Do(ctx, http.MethodGet, "/v1/pools?limit=500", nil, &page); err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}
+
 // PoolMember is one endpoint bound into a pool. Membership lifecycle
 // (add, modify, remove) is separate from the underlying endpoint's
 // lifecycle.

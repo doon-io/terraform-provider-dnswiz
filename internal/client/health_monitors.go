@@ -47,3 +47,13 @@ func (c *Client) UpdateHealthMonitor(ctx context.Context, id string, in HealthMo
 func (c *Client) DeleteHealthMonitor(ctx context.Context, id string) error {
 	return c.Do(ctx, http.MethodDelete, "/v1/health-monitors/"+id, nil, nil)
 }
+
+func (c *Client) ListHealthMonitors(ctx context.Context) ([]HealthMonitor, error) {
+	var page struct {
+		Items []HealthMonitor `json:"items"`
+	}
+	if err := c.Do(ctx, http.MethodGet, "/v1/health-monitors?limit=500", nil, &page); err != nil {
+		return nil, err
+	}
+	return page.Items, nil
+}

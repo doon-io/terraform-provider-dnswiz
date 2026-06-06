@@ -97,11 +97,17 @@ func (p *dnswizProvider) Resources(_ context.Context) []func() resource.Resource
 		NewEndpointResource,
 		NewHealthMonitorResource,
 		NewNotificationChannelResource,
+		NewZonePolicyResource,
 	}
 }
 
 func (p *dnswizProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewZoneDataSource,
+		NewPoolDataSource,
+		NewEndpointDataSource,
+		NewHealthMonitorDataSource,
+	}
 }
 
 // stringOrEnv returns the value in `v` if set, otherwise the env var, otherwise
