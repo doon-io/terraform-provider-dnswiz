@@ -51,40 +51,11 @@ resource "dnswiz_zone" "example" {
 | `dnswiz_pool_member` | planned     |
 | `dnswiz_endpoint`    | planned     |
 
-## Local development
+## Contributing
 
-```sh
-git clone https://github.com/doon-io/terraform-provider-dnswiz
-cd terraform-provider-dnswiz
-
-# Build the provider binary
-make build
-
-# Run unit tests
-make test
-
-# Run acceptance tests against a real dnswiz API.
-# These create and destroy actual resources on the target account, so
-# point them at a sandbox or disposable tenant.
-DNSWIZ_ENDPOINT=http://localhost:8787 \
-DNSWIZ_API_KEY=dwk_... \
-  make testacc
-```
-
-To try an unreleased local build from a real Terraform config, add a
-`dev_overrides` block to `~/.terraformrc`:
-
-```hcl
-provider_installation {
-  dev_overrides {
-    "doon-io/dnswiz" = "/Users/you/code/terraform-provider-dnswiz"
-  }
-  direct {}
-}
-```
-
-Then `go install .` and any `terraform plan` picks up your local binary
-without needing `terraform init`.
+Bug reports and pull requests are welcome. See
+[CONTRIBUTING.md](./CONTRIBUTING.md) for build instructions and the
+acceptance test setup.
 
 ## License
 
