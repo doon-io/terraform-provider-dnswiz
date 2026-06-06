@@ -19,11 +19,18 @@ import (
 // RFC 8659 respectively), not separate JSON keys per field.
 func encodeRecordData(rtype string, m recordResourceModel) (json.RawMessage, error) {
 	switch rtype {
-	case "A", "AAAA", "CNAME", "NS", "PTR", "DNAME", "TXT", "ANAME":
+	case "A", "AAAA", "CNAME", "NS", "PTR", "TXT":
 		if m.Value.IsNull() || m.Value.IsUnknown() {
 			return nil, fmt.Errorf("%s records require value", rtype)
 		}
 		return json.Marshal(map[string]any{"value": m.Value.ValueString()})
+	case "ANAME":
+		// Apex CNAME-flattening: server keys the envelope on "target",
+		// not "value", and uses it to resolve A/AAAA at answer time.
+		if m.Value.IsNull() || m.Value.IsUnknown() {
+			return nil, fmt.Errorf("ANAME records require value")
+		}
+		return json.Marshal(map[string]any{"target": m.Value.ValueString()})
 	case "MX":
 		if m.Value.IsNull() || m.Value.IsUnknown() || m.Priority.IsNull() || m.Priority.IsUnknown() {
 			return nil, fmt.Errorf("MX records require value and priority")
@@ -61,7 +68,7 @@ func encodeRecordData(rtype string, m recordResourceModel) (json.RawMessage, err
 		}
 		return json.Marshal(map[string]any{"pool_id": m.PoolID.ValueString()})
 	default:
-		return nil, fmt.Errorf("unsupported record type %q (supported: A, AAAA, CNAME, NS, PTR, DNAME, TXT, ANAME, MX, SRV, CAA, POOL)", rtype)
+		return nil, fmt.Errorf("unsupported record type %q (supported: A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL)", rtype)
 	}
 }
 
@@ -84,8 +91,12 @@ func decodeRecordData(rtype string, data json.RawMessage, m *recordResourceModel
 	}
 
 	switch rtype {
-	case "A", "AAAA", "CNAME", "NS", "PTR", "DNAME", "TXT", "ANAME":
+	case "A", "AAAA", "CNAME", "NS", "PTR", "TXT":
 		if v, ok := str("value"); ok {
+			m.Value = types.StringValue(v)
+		}
+	case "ANAME":
+		if v, ok := str("target"); ok {
 			m.Value = types.StringValue(v)
 		}
 	case "MX":

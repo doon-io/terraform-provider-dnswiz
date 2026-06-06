@@ -56,7 +56,7 @@ func (r *recordResource) Metadata(_ context.Context, req resource.MetadataReques
 
 func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "A DNS record inside a dnswiz zone. Supported types: A, AAAA, CNAME, NS, PTR, DNAME, TXT, ANAME, MX, SRV, CAA, POOL.",
+		MarkdownDescription: "A DNS record inside a dnswiz zone. Supported types: A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -76,13 +76,13 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Required:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Record type. One of A, AAAA, CNAME, NS, PTR, DNAME, TXT, ANAME, MX, SRV, CAA, POOL. Changing this forces a new resource.",
+				MarkdownDescription: "Record type. One of A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL. Changing this forces a new resource.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf("A", "AAAA", "CNAME", "NS", "PTR", "DNAME", "TXT", "ANAME", "MX", "SRV", "CAA", "POOL"),
+					stringvalidator.OneOf("A", "AAAA", "CNAME", "NS", "PTR", "TXT", "ANAME", "MX", "SRV", "CAA", "POOL"),
 				},
 			},
 			"ttl": schema.Int64Attribute{
@@ -106,7 +106,7 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional:            true,
 			},
 			"value": schema.StringAttribute{
-				MarkdownDescription: "Type-dependent value. For A and AAAA the IP address. For CNAME, NS, PTR, DNAME, ANAME the target name. For TXT the string content. For MX and SRV the target host. For CAA the property value.",
+				MarkdownDescription: "Type-dependent value. For A and AAAA the IP address. For CNAME, NS, PTR, ANAME the target name. For TXT the string content. For MX and SRV the target host. For CAA the property value.",
 				Optional:            true,
 				Computed:            true,
 			},

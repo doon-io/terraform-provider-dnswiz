@@ -3,12 +3,12 @@
 page_title: "dnswiz_record Resource - dnswiz"
 subcategory: ""
 description: |-
-  A DNS record inside a dnswiz zone. Supported types: A, AAAA, CNAME, NS, PTR, DNAME, TXT, ANAME, MX, SRV, CAA, POOL.
+  A DNS record inside a dnswiz zone. Supported types: A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL.
 ---
 
 # dnswiz_record (Resource)
 
-A DNS record inside a dnswiz zone. Supported types: A, AAAA, CNAME, NS, PTR, DNAME, TXT, ANAME, MX, SRV, CAA, POOL.
+A DNS record inside a dnswiz zone. Supported types: A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL.
 
 ## Example Usage
 
@@ -52,7 +52,7 @@ resource "dnswiz_record" "geo_www" {
 ### Required
 
 - `name` (String) Record owner relative to the zone. Use `@` for the apex.
-- `type` (String) Record type. One of A, AAAA, CNAME, NS, PTR, DNAME, TXT, ANAME, MX, SRV, CAA, POOL. Changing this forces a new resource.
+- `type` (String) Record type. One of A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL. Changing this forces a new resource.
 - `zone_id` (String) ID of the zone the record belongs to. Changing this forces a new resource.
 
 ### Optional
@@ -66,7 +66,7 @@ resource "dnswiz_record" "geo_www" {
 - `tag` (String) CAA property tag: `issue`, `issuewild`, or `iodef`.
 - `ttl` (Number) Record TTL in seconds. Omit to inherit the zone default.
 - `ttl_inherit` (Boolean) If true, the record's TTL tracks zone.default_ttl going forward. If false, the TTL is frozen at the value set at create or last update.
-- `value` (String) Type-dependent value. For A and AAAA the IP address. For CNAME, NS, PTR, DNAME, ANAME the target name. For TXT the string content. For MX and SRV the target host. For CAA the property value.
+- `value` (String) Type-dependent value. For A and AAAA the IP address. For CNAME, NS, PTR, ANAME the target name. For TXT the string content. For MX and SRV the target host. For CAA the property value.
 - `weight` (Number) SRV weight.
 
 ### Read-Only
