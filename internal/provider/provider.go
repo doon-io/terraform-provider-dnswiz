@@ -96,6 +96,7 @@ func (p *dnswizProvider) Resources(_ context.Context) []func() resource.Resource
 		NewPoolMemberResource,
 		NewEndpointResource,
 		NewHealthMonitorResource,
+		NewNotificationChannelResource,
 	}
 }
 
