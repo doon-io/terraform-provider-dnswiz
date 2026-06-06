@@ -39,4 +39,5 @@ clean:
 # Pulls descriptions from the provider schema and example HCL from
 # examples/. Run after any schema change.
 generate:
-	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name dnswiz
+	go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+	$(shell go env GOPATH)/bin/tfplugindocs generate --provider-name dnswiz
