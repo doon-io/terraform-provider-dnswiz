@@ -91,6 +91,7 @@ func (p *dnswizProvider) Configure(ctx context.Context, req provider.ConfigureRe
 func (p *dnswizProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewZoneResource,
+		NewRecordResource,
 	}
 }
 
