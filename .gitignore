@@ -1,0 +1,27 @@
+# Binaries
+/terraform-provider-dnswiz
+*.exe
+*.test
+*.out
+
+# Local override for go modules
+go.sum.tmp
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Terraform state from acceptance / examples
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# GoReleaser output
+dist/
+
+# Local dev-override file (terraformrc snippets)
+.terraformrc.local
