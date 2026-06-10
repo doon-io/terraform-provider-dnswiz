@@ -19,6 +19,11 @@ type Record struct {
 	Data       json.RawMessage `json:"data"`
 	Active     bool            `json:"active"`
 	Comment    string          `json:"comment,omitempty"`
+	// FQDN is server-computed at response time: name + zone apex with
+	// a trailing dot. Useful when downstream resources need the full
+	// name (e.g. an aws_route53_record alias target) without composing
+	// it from name + a separate zone data source.
+	FQDN string `json:"fqdn,omitempty"`
 }
 
 // RecordUpdate is the patch shape. Pointer fields are nil to leave

@@ -34,6 +34,7 @@ type recordResourceModel struct {
 	ID         types.String `tfsdk:"id"`
 	ZoneID     types.String `tfsdk:"zone_id"`
 	Name       types.String `tfsdk:"name"`
+	FQDN       types.String `tfsdk:"fqdn"`
 	Type       types.String `tfsdk:"type"`
 	TTL        types.Int64  `tfsdk:"ttl"`
 	TTLInherit types.Bool   `tfsdk:"ttl_inherit"`
@@ -74,6 +75,10 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Record owner relative to the zone. Use `@` for the apex.",
 				Required:            true,
+			},
+			"fqdn": schema.StringAttribute{
+				MarkdownDescription: "Fully qualified domain name of the record (owner + zone apex, including the trailing dot). Server-computed; read-only. Reference as `dnswiz_record.<name>.fqdn` when wiring this into another provider (e.g. an `aws_route53_record` alias target).",
+				Computed:            true,
 			},
 			"type": schema.StringAttribute{
 				MarkdownDescription: "Record type. One of A, AAAA, CNAME, NS, PTR, TXT, ANAME, MX, SRV, CAA, POOL. Changing this forces a new resource.",
@@ -271,6 +276,7 @@ func fromAPIRecord(rec *client.Record, _ recordResourceModel) recordResourceMode
 		ID:         types.StringValue(rec.ID),
 		ZoneID:     types.StringValue(rec.ZoneID),
 		Name:       types.StringValue(rec.Name),
+		FQDN:       types.StringValue(rec.FQDN),
 		Type:       types.StringValue(rec.Type),
 		TTL:        types.Int64Value(int64(rec.TTL)),
 		TTLInherit: types.BoolValue(rec.TTLInherit),

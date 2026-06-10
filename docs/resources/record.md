@@ -71,4 +71,5 @@ resource "dnswiz_record" "geo_www" {
 
 ### Read-Only
 
+- `fqdn` (String) Fully qualified domain name of the record (owner + zone apex, including the trailing dot). Server-computed; read-only. Reference as `dnswiz_record.<name>.fqdn` when wiring this into another provider (e.g. an `aws_route53_record` alias target).
 - `id` (String) The ID of this resource.
