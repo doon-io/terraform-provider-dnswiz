@@ -111,6 +111,7 @@ func (p *dnswizProvider) Resources(_ context.Context) []func() resource.Resource
 		NewZonePolicyResource,
 		NewCertResource,
 		NewIPAMBlockResource,
+		NewIPAMNetworkResource,
 	}
 }
 

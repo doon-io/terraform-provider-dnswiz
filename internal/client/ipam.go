@@ -95,6 +95,85 @@ func (c *Client) DefaultVRFID(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("no VRF found for tenant")
 }
 
+// IPAMNetwork is an operational subnet inside a block. Unlike blocks its parent
+// is explicit (set on create or chosen by the allocator), not derived.
+type IPAMNetwork struct {
+	ID            string  `json:"id,omitempty"`
+	VRFID         string  `json:"vrf_id,omitempty"`
+	ParentBlockID string  `json:"parent_block_id,omitempty"`
+	Family        int     `json:"family,omitempty"`
+	CIDR          string  `json:"cidr"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description,omitempty"`
+	GatewayIP     *string `json:"gateway_ip,omitempty"`
+	Version       int     `json:"version,omitempty"`
+}
+
+type IPAMNetworkCreate struct {
+	VRFID         string  `json:"vrf_id"`
+	ParentBlockID string  `json:"parent_block_id"`
+	CIDR          string  `json:"cidr"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description,omitempty"`
+	GatewayIP     *string `json:"gateway_ip,omitempty"`
+}
+
+type IPAMNetworkUpdate struct {
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	GatewayIP   *string `json:"gateway_ip"`
+}
+
+func (c *Client) CreateNetwork(ctx context.Context, in IPAMNetworkCreate) (*IPAMNetwork, error) {
+	var out IPAMNetwork
+	if err := c.Do(ctx, http.MethodPost, "/v1/ipam/networks", in, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// AllocateNetworkFromBlock carves the next free /mask subnet out of one block.
+func (c *Client) AllocateNetworkFromBlock(ctx context.Context, blockID string, mask int, name string) (*IPAMNetwork, error) {
+	var out IPAMNetwork
+	body := map[string]any{"mask": mask, "name": name}
+	if err := c.Do(ctx, http.MethodPost, "/v1/ipam/blocks/"+blockID+"/allocate-network", body, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// AllocateNetworkFromPool carves the next free /mask subnet from any block
+// carrying all of the given tags (lowest-CIDR block with room wins).
+func (c *Client) AllocateNetworkFromPool(ctx context.Context, tags []string, mask int, name string) (*IPAMNetwork, error) {
+	var out IPAMNetwork
+	body := map[string]any{"tags": tags, "mask": mask, "name": name}
+	if err := c.Do(ctx, http.MethodPost, "/v1/ipam/networks/allocate", body, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) GetNetwork(ctx context.Context, id string) (*IPAMNetwork, error) {
+	var out IPAMNetwork
+	if err := c.Do(ctx, http.MethodGet, "/v1/ipam/networks/"+id, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) UpdateNetwork(ctx context.Context, id string, version int, in IPAMNetworkUpdate) (*IPAMNetwork, error) {
+	var out IPAMNetwork
+	p := "/v1/ipam/networks/" + id + "?version=" + strconv.Itoa(version)
+	if err := c.Do(ctx, http.MethodPatch, p, in, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) DeleteNetwork(ctx context.Context, id string) error {
+	return c.Do(ctx, http.MethodDelete, "/v1/ipam/networks/"+id, nil, nil)
+}
+
 // NextAvailableSubnet peeks the next free aligned /mask prefix inside a block
 // WITHOUT allocating it — powers the dnswiz_ipam_available_subnet data source.
 func (c *Client) NextAvailableSubnet(ctx context.Context, blockID string, mask int) (string, error) {
