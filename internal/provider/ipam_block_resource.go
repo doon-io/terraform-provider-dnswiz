@@ -35,6 +35,7 @@ type ipamBlockResourceModel struct {
 	Name          types.String `tfsdk:"name"`
 	Description   types.String `tfsdk:"description"`
 	Origin        types.String `tfsdk:"origin"`
+	Tags          types.Set    `tfsdk:"tags"`
 	Family        types.Int64  `tfsdk:"family"`
 	ParentBlockID types.String `tfsdk:"parent_block_id"`
 	Version       types.Int64  `tfsdk:"version"`
@@ -79,6 +80,11 @@ func (r *ipamBlockResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace(), stringplanmodifier.UseStateForUnknown()},
+			},
+			"tags": schema.SetAttribute{
+				MarkdownDescription: "Tag names to attach to the block. Missing tags are created. These are what `dnswiz_ipam_network` selects on with `parent_tags`.",
+				Optional:            true,
+				ElementType:         types.StringType,
 			},
 			"family": schema.Int64Attribute{
 				MarkdownDescription: "Address family (4 or 6), derived from the CIDR.",
@@ -136,7 +142,11 @@ func (r *ipamBlockResource) Create(ctx context.Context, req resource.CreateReque
 		resp.Diagnostics.AddError("create ipam block", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIBlock(created))...)
+	if d := assignResourceTags(ctx, r.client, "block", created.ID, plan.Tags); d != nil {
+		resp.Diagnostics.Append(d...)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIBlock(created, plan.Tags))...)
 }
 
 func (r *ipamBlockResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -154,7 +164,17 @@ func (r *ipamBlockResource) Read(ctx context.Context, req resource.ReadRequest, 
 		resp.Diagnostics.AddError("read ipam block", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIBlock(got))...)
+	names, err := r.client.TagNamesForResource(ctx, "block", got.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("read block tags", err.Error())
+		return
+	}
+	tagSet, d := tagsToSet(ctx, state.Tags, names)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIBlock(got, tagSet))...)
 }
 
 func (r *ipamBlockResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -178,7 +198,11 @@ func (r *ipamBlockResource) Update(ctx context.Context, req resource.UpdateReque
 		resp.Diagnostics.AddError("update ipam block", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIBlock(got))...)
+	if d := assignResourceTags(ctx, r.client, "block", got.ID, plan.Tags); d != nil {
+		resp.Diagnostics.Append(d...)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, fromAPIBlock(got, plan.Tags))...)
 }
 
 func (r *ipamBlockResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -197,7 +221,7 @@ func (r *ipamBlockResource) ImportState(ctx context.Context, req resource.Import
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-func fromAPIBlock(b *client.IPAMBlock) ipamBlockResourceModel {
+func fromAPIBlock(b *client.IPAMBlock, tagSet types.Set) ipamBlockResourceModel {
 	m := ipamBlockResourceModel{
 		ID:          types.StringValue(b.ID),
 		VRFID:       types.StringValue(b.VRFID),
@@ -205,6 +229,7 @@ func fromAPIBlock(b *client.IPAMBlock) ipamBlockResourceModel {
 		Name:        types.StringValue(b.Name),
 		Description: types.StringValue(b.Description),
 		Origin:      types.StringValue(b.Origin),
+		Tags:        tagSet,
 		Family:      types.Int64Value(int64(b.Family)),
 		Version:     types.Int64Value(int64(b.Version)),
 	}

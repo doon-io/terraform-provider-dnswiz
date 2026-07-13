@@ -29,6 +29,19 @@ which queries to answer, and the TLS certs your apps actually serve.
 | [`dnswiz_zone_policy`](resources/zone_policy.md) | Per-zone hijack monitor and query firewall (allow / deny CIDRs, countries, qtypes, rate limits) |
 | [`dnswiz_notification_channel`](resources/notification_channel.md) | Where dnswiz pages you on outages and policy events (Slack, webhook, email) |
 | [`dnswiz_cert`](resources/cert.md) | TLS certs issued through your tenant's configured ACME CA, DNS-01 solved against your zone automatically |
+| [`dnswiz_ipam_block`](resources/ipam_block.md) | IPAM planning-layer prefixes. The address-space tree self-organizes by CIDR containment, so there is no parent to wire |
+| [`dnswiz_ipam_network`](resources/ipam_network.md) | Operational subnets: an explicit CIDR, or the next free subnet from a block or from a tag-selected pool of blocks (e.g. a `/24` from `region:eu-central-1`) |
+| [`dnswiz_ipam_ip_address`](resources/ipam_ip_address.md) | Host addresses: explicit, or the next free host in a network |
+
+## Data sources
+
+Look up existing objects by name, or find free space to allocate:
+[`dnswiz_zone`](data-sources/zone.md),
+[`dnswiz_pool`](data-sources/pool.md),
+[`dnswiz_endpoint`](data-sources/endpoint.md),
+[`dnswiz_health_monitor`](data-sources/health_monitor.md),
+[`dnswiz_ipam_available_subnet`](data-sources/ipam_available_subnet.md), and
+[`dnswiz_ipam_available_ip`](data-sources/ipam_available_ip.md).
 
 ## Authentication
 

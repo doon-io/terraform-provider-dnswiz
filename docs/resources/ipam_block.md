@@ -40,6 +40,7 @@ resource "dnswiz_ipam_block" "east" {
 
 - `description` (String) Optional description.
 - `origin` (String) Provenance of the space: `rfc1918`, `rir-arin`, `rir-ripe`, `rir-apnic`, `rir-lacnic`, `rir-afrinic`, or `other`. Defaults to `rfc1918`.
+- `tags` (Set of String) Tag names to attach to the block. Missing tags are created. These are what `dnswiz_ipam_network` selects on with `parent_tags`.
 - `vrf_id` (String) VRF the block belongs to. Omit to use the tenant's default VRF. Changing it forces a new resource.
 
 ### Read-Only
