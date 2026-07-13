@@ -277,19 +277,26 @@ func (r *ipamNetworkResource) ImportState(ctx context.Context, req resource.Impo
 // them on the network. A null/unknown set leaves tags untouched only when it's
 // also absent server-side; here we treat null as "no tags".
 func (r *ipamNetworkResource) syncTags(ctx context.Context, id string, want types.Set) diag.Diagnostics {
+	return assignResourceTags(ctx, r.client, "network", id, want)
+}
+
+// assignResourceTags resolves the desired tag names to IDs (creating any that
+// don't exist) and sets them as the full tag set on a resource. A null/unknown
+// set clears tags.
+func assignResourceTags(ctx context.Context, c *client.Client, resourceType, id string, want types.Set) diag.Diagnostics {
 	var names []string
 	if !want.IsNull() && !want.IsUnknown() {
 		if d := want.ElementsAs(ctx, &names, false); d.HasError() {
 			return d
 		}
 	}
-	ids, err := r.client.EnsureTags(ctx, names)
+	ids, err := c.EnsureTags(ctx, names)
 	if err != nil {
 		var d diag.Diagnostics
 		d.AddError("resolve tags", err.Error())
 		return d
 	}
-	if err := r.client.AssignTags(ctx, "network", id, ids); err != nil {
+	if err := c.AssignTags(ctx, resourceType, id, ids); err != nil {
 		var d diag.Diagnostics
 		d.AddError("assign tags", err.Error())
 		return d

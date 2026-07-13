@@ -174,6 +174,81 @@ func (c *Client) DeleteNetwork(ctx context.Context, id string) error {
 	return c.Do(ctx, http.MethodDelete, "/v1/ipam/networks/"+id, nil, nil)
 }
 
+// IPAMAddress is a single host inside a network.
+type IPAMAddress struct {
+	ID          string  `json:"id,omitempty"`
+	NetworkID   string  `json:"network_id,omitempty"`
+	Family      int     `json:"family,omitempty"`
+	Addr        string  `json:"addr"`
+	Status      string  `json:"status,omitempty"`
+	Hostname    *string `json:"hostname,omitempty"`
+	Description string  `json:"description,omitempty"`
+	Version     int     `json:"version,omitempty"`
+}
+
+type IPAMAddressCreate struct {
+	NetworkID   string  `json:"network_id"`
+	Addr        string  `json:"addr"`
+	Status      string  `json:"status,omitempty"`
+	Hostname    *string `json:"hostname"`
+	Description string  `json:"description,omitempty"`
+}
+
+type IPAMAddressUpdate struct {
+	Status      string  `json:"status"`
+	Hostname    *string `json:"hostname"`
+	Description string  `json:"description"`
+}
+
+func (c *Client) CreateIP(ctx context.Context, in IPAMAddressCreate) (*IPAMAddress, error) {
+	var out IPAMAddress
+	if err := c.Do(ctx, http.MethodPost, "/v1/ipam/ip-addresses", in, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// AllocateIP hands out the lowest free host in a network (active, not reserved).
+func (c *Client) AllocateIP(ctx context.Context, networkID string) (*IPAMAddress, error) {
+	var out IPAMAddress
+	if err := c.Do(ctx, http.MethodPost, "/v1/ipam/networks/"+networkID+"/allocate-ip", map[string]any{}, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) GetIP(ctx context.Context, id string) (*IPAMAddress, error) {
+	var out IPAMAddress
+	if err := c.Do(ctx, http.MethodGet, "/v1/ipam/ip-addresses/"+id, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) UpdateIP(ctx context.Context, id string, version int, in IPAMAddressUpdate) (*IPAMAddress, error) {
+	var out IPAMAddress
+	p := "/v1/ipam/ip-addresses/" + id + "?version=" + strconv.Itoa(version)
+	if err := c.Do(ctx, http.MethodPatch, p, in, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) DeleteIP(ctx context.Context, id string) error {
+	return c.Do(ctx, http.MethodDelete, "/v1/ipam/ip-addresses/"+id, nil, nil)
+}
+
+// NextAvailableIP peeks the next free host in a network WITHOUT allocating it.
+func (c *Client) NextAvailableIP(ctx context.Context, networkID string) (string, error) {
+	var out struct {
+		Addr string `json:"addr"`
+	}
+	if err := c.Do(ctx, http.MethodGet, "/v1/ipam/networks/"+networkID+"/next-available-ip", nil, &out); err != nil {
+		return "", err
+	}
+	return out.Addr, nil
+}
+
 // NextAvailableSubnet peeks the next free aligned /mask prefix inside a block
 // WITHOUT allocating it — powers the dnswiz_ipam_available_subnet data source.
 func (c *Client) NextAvailableSubnet(ctx context.Context, blockID string, mask int) (string, error) {

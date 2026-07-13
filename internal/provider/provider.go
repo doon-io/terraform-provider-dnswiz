@@ -112,6 +112,7 @@ func (p *dnswizProvider) Resources(_ context.Context) []func() resource.Resource
 		NewCertResource,
 		NewIPAMBlockResource,
 		NewIPAMNetworkResource,
+		NewIPAMIPAddressResource,
 	}
 }
 
@@ -122,6 +123,7 @@ func (p *dnswizProvider) DataSources(_ context.Context) []func() datasource.Data
 		NewEndpointDataSource,
 		NewHealthMonitorDataSource,
 		NewIPAMAvailableSubnetDataSource,
+		NewIPAMAvailableIPDataSource,
 	}
 }
 
